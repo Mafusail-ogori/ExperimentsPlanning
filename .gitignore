@@ -1,0 +1,47 @@
+# Build artifacts
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.ilk
+*.log
+*.suo
+*.user
+*.dotCover
+*.vs/
+
+# NuGet packages
+*.nupkg
+packages/
+project.lock.json
+*.snupkg
+
+# Rider & VS Code settings
+.idea/
+.vscode/
+.vs/
+
+# Resharper
+*.DotSettings.user
+
+# Temporary files
+*.bak
+*.tmp
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Logs & Debugging
+*.tlog
+*.lastbuildstate
+logs/
+*.log
+
+# Publish output
+publish/
+app.publish/
+
+# Global Visual Studio/JetBrains Rider ignores
+*.sln.cache
