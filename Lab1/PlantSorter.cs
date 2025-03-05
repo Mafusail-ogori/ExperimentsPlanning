@@ -61,71 +61,41 @@ public class PlantSorter
         PrintFirstFew(sortedPlants);
     }
 
-    public void SortByTypeThreaded()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        List<Plant>? sortedPlants = null;
-        var thread = new Thread(() => {
-            sortedPlants = plants.OrderBy(p => p.Type).ToList();
-        });
 
-        thread.Start();
-        thread.Join();
-
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting by type (threaded). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants!);
-    }
-
-    public void SortByVarietyThreaded()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        List<Plant>? sortedPlants = null;
-        var thread = new Thread(() => {
-            sortedPlants = plants.OrderBy(p => p.Variety).ToList();
-        });
-
-        thread.Start();
-        thread.Join();
-
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting by variety (threaded). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants!);
-    }
-
-    public void SortByGrowingConditionsThreaded()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        List<Plant>? sortedPlants = null;
-        var thread = new Thread(() => {
-            sortedPlants = plants.OrderBy(p => p.GrowingConditions).ToList();
-        });
-
-        thread.Start();
-        thread.Join();
-
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting by growing conditions (threaded). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants!);
-    }
 
     public void RunAllComparisons()
     {
         Console.WriteLine("\n=== Standard sorting methods ===");
+        var standardStopwatch = Stopwatch.StartNew();
+
         SortByType();
         SortByVariety();
         SortByGrowingConditions();
 
-        Console.WriteLine("\n=== Threaded sorting methods ===");
-        SortByTypeThreaded();
-        SortByVarietyThreaded();
-        SortByGrowingConditionsThreaded();
+        standardStopwatch.Stop();
+        Console.WriteLine($"Total time for standard methods: {standardStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== Parallel sorting methods ===");
+        var threadedStopwatch = Stopwatch.StartNew();
+
+        var thread1 = new Thread(SortByType);
+        var thread2 = new Thread(SortByVariety);
+        var thread3 = new Thread(SortByGrowingConditions);
+
+        thread1.Start();
+        thread2.Start();
+        thread3.Start();
+
+        thread1.Join();
+        thread2.Join();
+        thread3.Join();
+
+        threadedStopwatch.Stop();
+        Console.WriteLine($"Total time for parallel methods: {threadedStopwatch.ElapsedMilliseconds} ms");
     }
 
-    private void PrintFirstFew(List<Plant> plants, int count = 5)
+
+    private void PrintFirstFew(List<Plant> plants, int count = 3)
     {
         Console.WriteLine($"First {count} elements:");
         plants.Take(count).ToList().ForEach(p => Console.WriteLine(p));

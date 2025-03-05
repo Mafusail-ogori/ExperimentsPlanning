@@ -32,190 +32,97 @@ public class PlantSorter
             }).ToList();
     }
 
-    public void SortByTypeStandard()
+    public void SortByType()
     {
         var stopwatch = Stopwatch.StartNew();
         var sortedPlants = plants.OrderBy(p => p.Type).ToList();
         stopwatch.Stop();
 
-        Console.WriteLine($"Standard sorting by type. Time: {stopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Sorting by type. Time: {stopwatch.ElapsedMilliseconds} ms");
         PrintFirstFew(sortedPlants);
     }
 
-    public void SortByTypeWithNewTask()
+    public void SortByVariety()
     {
         var stopwatch = Stopwatch.StartNew();
-        
-        List<Plant>? sortedPlants = null;
-        var task = new Task(() => {
-            sortedPlants = plants.OrderBy(p => p.Type).ToList();
-        });
-
-        task.Start();
-        task.Wait();
-        
+        var sortedPlants = plants.OrderBy(p => p.Variety).ToList();
         stopwatch.Stop();
-        Console.WriteLine($"Sorting using new Task().Start(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants!);
-    }
 
-    public void SortByTypeWithTaskFactory()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        var task = Task.Factory.StartNew(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        var sortedPlants = task.Result; 
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting using Task.Factory.StartNew(). Time: {stopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Sorting by variety. Time: {stopwatch.ElapsedMilliseconds} ms");
         PrintFirstFew(sortedPlants);
     }
 
-    public void SortByTypeWithTaskResult()
+    public void SortByGrowingConditions()
     {
         var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = new Task<List<Plant>>(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        task.Start();
-        var sortedPlants = task.Result;
-        
+        var sortedPlants = plants.OrderBy(p => p.GrowingConditions).ToList();
         stopwatch.Stop();
-        Console.WriteLine($"Sorting using task.Result. Time: {stopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine($"Sorting by growing conditions. Time: {stopwatch.ElapsedMilliseconds} ms");
         PrintFirstFew(sortedPlants);
     }
 
-    public void SortWithThreadSleep()
+    public void RunAllComparisons()
     {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = Task.Run(() => {
-            Thread.Sleep(10); 
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        var sortedPlants = task.Result;
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with Thread.Sleep(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants);
+        Console.WriteLine("\n=== Standard sorting methods ===");
+        var standardStopwatch = Stopwatch.StartNew();
+
+        SortByType();
+        SortByVariety();
+        SortByGrowingConditions();
+
+        standardStopwatch.Stop();
+        Console.WriteLine($"Total time for standard methods: {standardStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== Task.Run sorting methods ===");
+        var taskRunStopwatch = Stopwatch.StartNew();
+
+        var taskRunType = Task.Run(SortByType);
+        var taskRunVariety = Task.Run(SortByVariety);
+        var taskRunConditions = Task.Run(SortByGrowingConditions);
+
+        Task.WaitAll(taskRunType, taskRunVariety, taskRunConditions);
+
+        taskRunStopwatch.Stop();
+        Console.WriteLine($"Total time for Task.Run methods: {taskRunStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== New Task with Start() sorting methods ===");
+        var newTaskStopwatch = Stopwatch.StartNew();
+
+        var newTaskType = new Task(SortByType);
+        var newTaskVariety = new Task(SortByVariety);
+        var newTaskConditions = new Task(SortByGrowingConditions);
+
+        newTaskType.Start();
+        newTaskVariety.Start();
+        newTaskConditions.Start();
+
+        Task.WaitAll(newTaskType, newTaskVariety, newTaskConditions);
+
+        newTaskStopwatch.Stop();
+        Console.WriteLine($"Total time for New Task with Start() methods: {newTaskStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== Task.Factory.StartNew sorting methods ===");
+        var factoryStopwatch = Stopwatch.StartNew();
+
+        var factoryTaskType = Task.Factory.StartNew(SortByType);
+        var factoryTaskVariety = Task.Factory.StartNew(SortByVariety);
+        var factoryTaskConditions = Task.Factory.StartNew(SortByGrowingConditions);
+
+        Task.WaitAll(factoryTaskType, factoryTaskVariety, factoryTaskConditions);
+
+        factoryStopwatch.Stop();
+        Console.WriteLine($"Total time for Task.Factory.StartNew methods: {factoryStopwatch.ElapsedMilliseconds} ms");
+
+
+        Console.WriteLine("\n=== Performance Summary ===");
+        Console.WriteLine($"Standard methods: {standardStopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Task.Run methods: {taskRunStopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"New Task with Start() methods: {newTaskStopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Task.Factory.StartNew methods: {factoryStopwatch.ElapsedMilliseconds} ms");
     }
 
-    public void SortWithThreadSpinWait()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = Task.Run(() => {
-            Thread.SpinWait(100);
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        var sortedPlants = task.Result;
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with Thread.SpinWait(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants);
-    }
-
-    public void SortWithTaskWaitTimeout()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = Task.Run(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        bool completed = task.Wait(10000); 
-        
-        List<Plant> sortedPlants;
-        if (completed)
-        {
-            sortedPlants = task.Result;
-        }
-        else
-        {
-            Console.WriteLine("Task timed out!");
-            sortedPlants = new List<Plant>();
-        }
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with task.Wait(timeout). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants);
-    }
-
-    public void SortWithTaskWaitAll()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> sortByTypeTask = Task.Run(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        Task<List<Plant>> sortByVarietyTask = Task.Run(() => {
-            return plants.OrderBy(p => p.Variety).ToList();
-        });
-        
-        Task.WaitAll(sortByTypeTask, sortByVarietyTask);
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with Task.WaitAll(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        Console.WriteLine("Results from both tasks:");
-        Console.WriteLine("1. Sort by Type:");
-        PrintFirstFew(sortByTypeTask.Result);
-        Console.WriteLine("2. Sort by Variety:");
-        PrintFirstFew(sortByVarietyTask.Result);
-    }
-
-    public void SortWithTaskWaitAny()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> sortByTypeTask = Task.Run(() => {
-            Thread.Sleep(50);
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        Task<List<Plant>> sortByVarietyTask = Task.Run(() => {
-            return plants.OrderBy(p => p.Variety).ToList();
-        });
-        
-        int index = Task.WaitAny(sortByTypeTask, sortByVarietyTask);
-        
-        stopwatch.Stop();
-        Console.WriteLine($"First completed task (index {index}) with Task.WaitAny(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        
-        if (index == 0)
-        {
-            Console.WriteLine("Sort by Type completed first:");
-            PrintFirstFew(sortByTypeTask.Result);
-        }
-        else
-        {
-            Console.WriteLine("Sort by Variety completed first:");
-            PrintFirstFew(sortByVarietyTask.Result);
-        }
-    }
-
-    public void RunAllTaskMethods()
-    {
-        Console.WriteLine("\n=== Comparing different Task methods ===");
-        SortByTypeStandard();
-        SortByTypeWithNewTask();
-        SortByTypeWithTaskFactory();
-        SortByTypeWithTaskResult();
-        SortWithThreadSleep();
-        SortWithThreadSpinWait();
-        SortWithTaskWaitTimeout();
-        SortWithTaskWaitAll();
-        SortWithTaskWaitAny();
-    }
-
-    private void PrintFirstFew(List<Plant> plants, int count = 5)
+    private void PrintFirstFew(List<Plant> plants, int count = 3)
     {
         Console.WriteLine($"First {count} elements:");
         plants.Take(count).ToList().ForEach(p => Console.WriteLine(p));
