@@ -7,15 +7,20 @@ using System.Threading.Tasks;
 
 public class PlantSorter
 {
-    private List<Plant> plants;
-    private int counter;
+    private readonly List<Plant> plants;
     private readonly object lockObject = new object();
     private readonly Mutex mutex = new Mutex();
+    
+    // Counters for different plant types - shared resources that need synchronization
+    private int floweringCount = 0;
+    private int decorativeCount = 0;
+    private int vegetableCount = 0;
+    private int fruitCount = 0;
+    private int bushCount = 0;
 
     public PlantSorter(int count)
     {
         plants = GeneratePlants(count);
-        counter = 0;
     }
 
     private List<Plant> GeneratePlants(int count)
@@ -36,241 +41,96 @@ public class PlantSorter
             }).ToList();
     }
 
-    // Standard sorting method for comparison
-    public void SortByTypeStandard()
+    public void SortByType()
     {
         var stopwatch = Stopwatch.StartNew();
         var sortedPlants = plants.OrderBy(p => p.Type).ToList();
         stopwatch.Stop();
 
-        Console.WriteLine($"Standard sorting by type. Time: {stopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Sorting by type. Time: {stopwatch.ElapsedMilliseconds} ms");
         PrintFirstFew(sortedPlants);
     }
 
-    // Method 1: new Task(), task.Start()
-    public void SortByTypeWithNewTask()
+    public void SortByVariety()
     {
         var stopwatch = Stopwatch.StartNew();
-        
-        List<Plant>? sortedPlants = null;
-        var task = new Task(() => {
-            sortedPlants = plants.OrderBy(p => p.Type).ToList();
-        });
-
-        task.Start();
-        task.Wait(); // Wait for task to complete
-        
+        var sortedPlants = plants.OrderBy(p => p.Variety).ToList();
         stopwatch.Stop();
-        Console.WriteLine($"Sorting using new Task().Start(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants!);
-    }
 
-    // Method 2: Task.Factory.StartNew()
-    public void SortByTypeWithTaskFactory()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        var task = Task.Factory.StartNew(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        var sortedPlants = task.Result; // Wait for completion and get result
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting using Task.Factory.StartNew(). Time: {stopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Sorting by variety. Time: {stopwatch.ElapsedMilliseconds} ms");
         PrintFirstFew(sortedPlants);
     }
 
-    // Method 3: Synchronous execution with task.Result
-    public void SortByTypeWithTaskResult()
+    public void SortByGrowingConditions()
     {
         var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = new Task<List<Plant>>(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        task.Start();
-        var sortedPlants = task.Result; // Synchronously wait for the result
-        
+        var sortedPlants = plants.OrderBy(p => p.GrowingConditions).ToList();
         stopwatch.Stop();
-        Console.WriteLine($"Sorting using task.Result. Time: {stopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine($"Sorting by growing conditions. Time: {stopwatch.ElapsedMilliseconds} ms");
         PrintFirstFew(sortedPlants);
     }
 
-    // Method 4.1: Synchronization with Thread.Sleep
-    public void SortWithThreadSleep()
+    // New methods with critical section implementations
+    
+    // 1. Using lock statement
+    public void CountPlantTypesByLock()
     {
+        Console.WriteLine("\n=== Counting plant types using lock ===");
+        ResetCounters();
         var stopwatch = Stopwatch.StartNew();
         
-        Task<List<Plant>> task = Task.Run(() => {
-            Thread.Sleep(10); // Simulate some work with a small delay
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        var sortedPlants = task.Result;
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with Thread.Sleep(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants);
-    }
-
-    // Method 4.2: Synchronization with Thread.SpinWait
-    public void SortWithThreadSpinWait()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = Task.Run(() => {
-            Thread.SpinWait(100); // Busy waiting
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        var sortedPlants = task.Result;
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with Thread.SpinWait(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants);
-    }
-
-    // Method 4.3: Synchronization with task.Wait(timeout)
-    public void SortWithTaskWaitTimeout()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> task = Task.Run(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        bool completed = task.Wait(10000); // Wait for max 10 seconds
-        
-        List<Plant> sortedPlants;
-        if (completed)
+        // Create multiple tasks to count plants by type
+        var tasks = new List<Task>();
+        for (int i = 0; i < 5; i++)
         {
-            sortedPlants = task.Result;
-        }
-        else
-        {
-            Console.WriteLine("Task timed out!");
-            sortedPlants = new List<Plant>();
-        }
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with task.Wait(timeout). Time: {stopwatch.ElapsedMilliseconds} ms");
-        PrintFirstFew(sortedPlants);
-    }
-
-    // Method 4.4: Synchronization with Task.WaitAll
-    public void SortWithTaskWaitAll()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        Task<List<Plant>> sortByTypeTask = Task.Run(() => {
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        Task<List<Plant>> sortByVarietyTask = Task.Run(() => {
-            return plants.OrderBy(p => p.Variety).ToList();
-        });
-        
-        Task.WaitAll(sortByTypeTask, sortByVarietyTask);
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Sorting with Task.WaitAll(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        Console.WriteLine("Results from both tasks:");
-        Console.WriteLine("1. Sort by Type:");
-        PrintFirstFew(sortByTypeTask.Result);
-        Console.WriteLine("2. Sort by Variety:");
-        PrintFirstFew(sortByVarietyTask.Result);
-    }
-
-    // Method 4.5: Synchronization with Task.WaitAny
-    public void SortWithTaskWaitAny()
-    {
-        var stopwatch = Stopwatch.StartNew();
-        
-        // Create two tasks - one sorting by type and one by variety
-        Task<List<Plant>> sortByTypeTask = Task.Run(() => {
-            Thread.Sleep(50); // Add a small delay to one task
-            return plants.OrderBy(p => p.Type).ToList();
-        });
-        
-        Task<List<Plant>> sortByVarietyTask = Task.Run(() => {
-            return plants.OrderBy(p => p.Variety).ToList();
-        });
-        
-        // Wait for the first task to complete
-        int index = Task.WaitAny(sortByTypeTask, sortByVarietyTask);
-        
-        stopwatch.Stop();
-        Console.WriteLine($"First completed task (index {index}) with Task.WaitAny(). Time: {stopwatch.ElapsedMilliseconds} ms");
-        
-        if (index == 0)
-        {
-            Console.WriteLine("Sort by Type completed first:");
-            PrintFirstFew(sortByTypeTask.Result);
-        }
-        else
-        {
-            Console.WriteLine("Sort by Variety completed first:");
-            PrintFirstFew(sortByVarietyTask.Result);
-        }
-        
-        // Wait for the other task to complete
-        if (index == 0)
-        {
-            sortByVarietyTask.Wait();
-        }
-        else
-        {
-            sortByTypeTask.Wait();
-        }
-    }
-
-    // NEW CRITICAL SECTION METHODS BELOW
-
-    // Method 5.1: Using lock statement
-    public void IncrementWithLock(int iterations)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        counter = 0;
-        
-        Task[] tasks = new Task[10];
-        for (int i = 0; i < tasks.Length; i++)
-        {
-            tasks[i] = Task.Run(() => {
-                for (int j = 0; j < iterations; j++)
+            int startIndex = i * (plants.Count / 5);
+            int endIndex = (i == 4) ? plants.Count : (i + 1) * (plants.Count / 5);
+            
+            tasks.Add(Task.Run(() =>
+            {
+                for (int j = startIndex; j < endIndex; j++)
                 {
+                    // Critical section protected by lock
                     lock (lockObject)
                     {
-                        counter++;
+                        IncrementCounterForType(plants[j].Type);
                     }
                 }
-            });
+            }));
         }
         
-        Task.WaitAll(tasks);
-        
+        Task.WaitAll(tasks.ToArray());
         stopwatch.Stop();
-        Console.WriteLine($"Using lock() for {iterations * tasks.Length} increments. Time: {stopwatch.ElapsedMilliseconds} ms. Counter value: {counter}");
-    }
-
-    // Method 5.2: Using Monitor.Enter/Exit
-    public void IncrementWithMonitor(int iterations)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        counter = 0;
         
-        Task[] tasks = new Task[10];
-        for (int i = 0; i < tasks.Length; i++)
+        PrintTypeCounters();
+        Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
+    }
+    
+    // 2. Using Monitor.Enter/Exit
+    public void CountPlantTypesByMonitor()
+    {
+        Console.WriteLine("\n=== Counting plant types using Monitor.Enter/Exit ===");
+        ResetCounters();
+        var stopwatch = Stopwatch.StartNew();
+        
+        // Create multiple tasks to count plants by type
+        var tasks = new List<Task>();
+        for (int i = 0; i < 5; i++)
         {
-            tasks[i] = Task.Run(() => {
-                for (int j = 0; j < iterations; j++)
+            int startIndex = i * (plants.Count / 5);
+            int endIndex = (i == 4) ? plants.Count : (i + 1) * (plants.Count / 5);
+            
+            tasks.Add(Task.Run(() =>
+            {
+                for (int j = startIndex; j < endIndex; j++)
                 {
+                    // Critical section protected by Monitor
                     bool lockTaken = false;
                     try
                     {
                         Monitor.Enter(lockObject, ref lockTaken);
-                        counter++;
+                        IncrementCounterForType(plants[j].Type);
                     }
                     finally
                     {
@@ -280,175 +140,235 @@ public class PlantSorter
                         }
                     }
                 }
-            });
+            }));
         }
         
-        Task.WaitAll(tasks);
-        
+        Task.WaitAll(tasks.ToArray());
         stopwatch.Stop();
-        Console.WriteLine($"Using Monitor.Enter() for {iterations * tasks.Length} increments. Time: {stopwatch.ElapsedMilliseconds} ms. Counter value: {counter}");
-    }
-
-    // Method 5.3: Using Mutex
-    public void IncrementWithMutex(int iterations)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        counter = 0;
         
-        Task[] tasks = new Task[10];
-        for (int i = 0; i < tasks.Length; i++)
+        PrintTypeCounters();
+        Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
+    }
+    
+    // 3. Using Mutex
+    public void CountPlantTypesByMutex()
+    {
+        Console.WriteLine("\n=== Counting plant types using Mutex ===");
+        ResetCounters();
+        var stopwatch = Stopwatch.StartNew();
+        
+        // Create multiple tasks to count plants by type
+        var tasks = new List<Task>();
+        for (int i = 0; i < 5; i++)
         {
-            tasks[i] = Task.Run(() => {
-                for (int j = 0; j < iterations; j++)
+            int startIndex = i * (plants.Count / 5);
+            int endIndex = (i == 4) ? plants.Count : (i + 1) * (plants.Count / 5);
+            
+            tasks.Add(Task.Run(() =>
+            {
+                for (int j = startIndex; j < endIndex; j++)
                 {
+                    // Critical section protected by Mutex
+                    mutex.WaitOne();
                     try
                     {
-                        mutex.WaitOne();
-                        counter++;
+                        IncrementCounterForType(plants[j].Type);
                     }
                     finally
                     {
                         mutex.ReleaseMutex();
                     }
                 }
-            });
+            }));
         }
         
-        Task.WaitAll(tasks);
-        
+        Task.WaitAll(tasks.ToArray());
         stopwatch.Stop();
-        Console.WriteLine($"Using Mutex for {iterations * tasks.Length} increments. Time: {stopwatch.ElapsedMilliseconds} ms. Counter value: {counter}");
+        
+        PrintTypeCounters();
+        Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
     }
-
-    // Method 5.4: Using Interlocked
-    public void IncrementWithInterlocked(int iterations)
+    
+    // 4. Using Interlocked
+    public void CountPlantTypesByInterlocked()
     {
-        var stopwatch = Stopwatch.StartNew();
-        counter = 0;
-        
-        Task[] tasks = new Task[10];
-        for (int i = 0; i < tasks.Length; i++)
-        {
-            tasks[i] = Task.Run(() => {
-                for (int j = 0; j < iterations; j++)
-                {
-                    Interlocked.Increment(ref counter);
-                }
-            });
-        }
-        
-        Task.WaitAll(tasks);
-        
-        stopwatch.Stop();
-        Console.WriteLine($"Using Interlocked.Increment() for {iterations * tasks.Length} increments. Time: {stopwatch.ElapsedMilliseconds} ms. Counter value: {counter}");
-    }
-
-    // Method 5.5: Multiple counters with different synchronization methods
-    public void CompareCounterMethods()
-    {
+        Console.WriteLine("\n=== Counting plant types using Interlocked ===");
+        ResetCounters();
         var stopwatch = Stopwatch.StartNew();
         
-        int counterNoSync = 0;
-        int counterWithLock = 0;
-        int counterWithMonitor = 0;
-        int counterWithMutex = 0;
-        int counterWithInterlocked = 0;
+        // For Interlocked, we need separate variables for each counter
+        int flowering = 0, decorative = 0, vegetable = 0, fruit = 0, bush = 0;
         
-        const int iterations = 1000;
-        const int taskCount = 10;
-        
-        Task[] tasks = new Task[taskCount];
-        for (int i = 0; i < taskCount; i++)
+        // Create multiple tasks to count plants by type
+        var tasks = new List<Task>();
+        for (int i = 0; i < 5; i++)
         {
-            tasks[i] = Task.Run(() => {
-                for (int j = 0; j < iterations; j++)
+            int startIndex = i * (plants.Count / 5);
+            int endIndex = (i == 4) ? plants.Count : (i + 1) * (plants.Count / 5);
+            
+            tasks.Add(Task.Run(() =>
+            {
+                for (int j = startIndex; j < endIndex; j++)
                 {
-                    // No synchronization (incorrect result expected)
-                    counterNoSync++;
-                    
-                    // Using lock
-                    lock (lockObject)
+                    // Atomic operations with Interlocked
+                    switch (plants[j].Type)
                     {
-                        counterWithLock++;
+                        case "Flowering":
+                            Interlocked.Increment(ref flowering);
+                            break;
+                        case "Decorative":
+                            Interlocked.Increment(ref decorative);
+                            break;
+                        case "Vegetable":
+                            Interlocked.Increment(ref vegetable);
+                            break;
+                        case "Fruit":
+                            Interlocked.Increment(ref fruit);
+                            break;
+                        case "Bush":
+                            Interlocked.Increment(ref bush);
+                            break;
                     }
-                    
-                    // Using Monitor
-                    bool lockTaken = false;
-                    try
-                    {
-                        Monitor.Enter(lockObject, ref lockTaken);
-                        counterWithMonitor++;
-                    }
-                    finally
-                    {
-                        if (lockTaken)
-                        {
-                            Monitor.Exit(lockObject);
-                        }
-                    }
-                    
-                    // Using Mutex
-                    try
-                    {
-                        mutex.WaitOne();
-                        counterWithMutex++;
-                    }
-                    finally
-                    {
-                        mutex.ReleaseMutex();
-                    }
-                    
-                    // Using Interlocked
-                    Interlocked.Increment(ref counterWithInterlocked);
                 }
-            });
+            }));
         }
         
-        Task.WaitAll(tasks);
+        Task.WaitAll(tasks.ToArray());
+        
+        // Copy the final values to the class members
+        floweringCount = flowering;
+        decorativeCount = decorative;
+        vegetableCount = vegetable;
+        fruitCount = fruit;
+        bushCount = bush;
         
         stopwatch.Stop();
-        Console.WriteLine($"Comparison of counter methods for {iterations * taskCount} increments total. Time: {stopwatch.ElapsedMilliseconds} ms");
-        Console.WriteLine($"Expected count: {iterations * taskCount}");
-        Console.WriteLine($"No synchronization: {counterNoSync} (likely incorrect due to race conditions)");
-        Console.WriteLine($"Using lock: {counterWithLock}");
-        Console.WriteLine($"Using Monitor: {counterWithMonitor}");
-        Console.WriteLine($"Using Mutex: {counterWithMutex}");
-        Console.WriteLine($"Using Interlocked: {counterWithInterlocked}");
+        
+        PrintTypeCounters();
+        Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
     }
 
-    // Run all methods for comparison
-    public void RunAllTaskMethods()
+    public void RunAllComparisons()
     {
-        Console.WriteLine("\n=== Comparing different Task methods ===");
+        Console.WriteLine("\n=== Standard sorting methods ===");
+        var standardStopwatch = Stopwatch.StartNew();
+
+        SortByType();
+        SortByVariety();
+        SortByGrowingConditions();
+
+        standardStopwatch.Stop();
+        Console.WriteLine($"Total time for standard methods: {standardStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== Task.Run sorting methods ===");
+        var taskRunStopwatch = Stopwatch.StartNew();
+
+        var taskRunType = Task.Run(SortByType);
+        var taskRunVariety = Task.Run(SortByVariety);
+        var taskRunConditions = Task.Run(SortByGrowingConditions);
+
+        Task.WaitAll(taskRunType, taskRunVariety, taskRunConditions);
+
+        taskRunStopwatch.Stop();
+        Console.WriteLine($"Total time for Task.Run methods: {taskRunStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== New Task with Start() sorting methods ===");
+        var newTaskStopwatch = Stopwatch.StartNew();
+
+        var newTaskType = new Task(SortByType);
+        var newTaskVariety = new Task(SortByVariety);
+        var newTaskConditions = new Task(SortByGrowingConditions);
+
+        newTaskType.Start();
+        newTaskVariety.Start();
+        newTaskConditions.Start();
+
+        Task.WaitAll(newTaskType, newTaskVariety, newTaskConditions);
+
+        newTaskStopwatch.Stop();
+        Console.WriteLine($"Total time for New Task with Start() methods: {newTaskStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== Task.Factory.StartNew sorting methods ===");
+        var factoryStopwatch = Stopwatch.StartNew();
+
+        var factoryTaskType = Task.Factory.StartNew(SortByType);
+        var factoryTaskVariety = Task.Factory.StartNew(SortByVariety);
+        var factoryTaskConditions = Task.Factory.StartNew(SortByGrowingConditions);
+
+        Task.WaitAll(factoryTaskType, factoryTaskVariety, factoryTaskConditions);
+
+        factoryStopwatch.Stop();
+        Console.WriteLine($"Total time for Task.Factory.StartNew methods: {factoryStopwatch.ElapsedMilliseconds} ms");
+
+        // Add the critical section comparison tests
+        CountPlantTypesByLock();
+        CountPlantTypesByMonitor();
+        CountPlantTypesByMutex();
+        CountPlantTypesByInterlocked();
+
+        Console.WriteLine("\n=== Critical Section Methods Performance Summary ===");
+        var criticalSectionStopwatch = Stopwatch.StartNew();
         
-        // Standard method for baseline
-        SortByTypeStandard();
+        Task.Run(CountPlantTypesByLock).Wait();
+        Task.Run(CountPlantTypesByMonitor).Wait();
+        Task.Run(CountPlantTypesByMutex).Wait();
+        Task.Run(CountPlantTypesByInterlocked).Wait();
         
-        // Task creation methods
-        SortByTypeWithNewTask();
-        SortByTypeWithTaskFactory();
-        SortByTypeWithTaskResult();
-        
-        // Synchronization methods
-        SortWithThreadSleep();
-        SortWithThreadSpinWait();
-        SortWithTaskWaitTimeout();
-        SortWithTaskWaitAll();
-        SortWithTaskWaitAny();
-        
-        // Critical section methods
-        Console.WriteLine("\n=== Comparing different Critical Section methods ===");
-        IncrementWithLock(1000);
-        IncrementWithMonitor(1000);
-        IncrementWithMutex(1000);
-        IncrementWithInterlocked(1000);
-        CompareCounterMethods();
+        criticalSectionStopwatch.Stop();
+        Console.WriteLine($"Total time for all critical section methods: {criticalSectionStopwatch.ElapsedMilliseconds} ms");
+
+        Console.WriteLine("\n=== Performance Summary ===");
+        Console.WriteLine($"Standard methods: {standardStopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Task.Run methods: {taskRunStopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"New Task with Start() methods: {newTaskStopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Task.Factory.StartNew methods: {factoryStopwatch.ElapsedMilliseconds} ms");
     }
 
-    private void PrintFirstFew(List<Plant> plants, int count = 5)
+    private static void PrintFirstFew(List<Plant> plants, int count = 3)
     {
         Console.WriteLine($"First {count} elements:");
         plants.Take(count).ToList().ForEach(p => Console.WriteLine(p));
         Console.WriteLine();
+    }
+    
+    // Helper methods for critical section implementations
+    private void ResetCounters()
+    {
+        floweringCount = 0;
+        decorativeCount = 0;
+        vegetableCount = 0;
+        fruitCount = 0;
+        bushCount = 0;
+    }
+    
+    private void IncrementCounterForType(string type)
+    {
+        switch (type)
+        {
+            case "Flowering":
+                floweringCount++;
+                break;
+            case "Decorative":
+                decorativeCount++;
+                break;
+            case "Vegetable":
+                vegetableCount++;
+                break;
+            case "Fruit":
+                fruitCount++;
+                break;
+            case "Bush":
+                bushCount++;
+                break;
+        }
+    }
+    
+    private void PrintTypeCounters()
+    {
+        Console.WriteLine($"Flowering: {floweringCount}");
+        Console.WriteLine($"Decorative: {decorativeCount}");
+        Console.WriteLine($"Vegetable: {vegetableCount}");
+        Console.WriteLine($"Fruit: {fruitCount}");
+        Console.WriteLine($"Bush: {bushCount}");
     }
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 public class PlantSorter
 {
-    private List<Plant> plants;
+    private readonly List<Plant> plants;
 
     public PlantSorter(int count)
     {
@@ -122,7 +122,7 @@ public class PlantSorter
         Console.WriteLine($"Task.Factory.StartNew methods: {factoryStopwatch.ElapsedMilliseconds} ms");
     }
 
-    private void PrintFirstFew(List<Plant> plants, int count = 3)
+    private static void PrintFirstFew(List<Plant> plants, int count = 3)
     {
         Console.WriteLine($"First {count} elements:");
         plants.Take(count).ToList().ForEach(p => Console.WriteLine(p));
