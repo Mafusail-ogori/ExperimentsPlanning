@@ -150,14 +150,12 @@ public class PlantSorter
         Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
     }
     
-    // 3. Using Mutex
     public void CountPlantTypesByMutex()
     {
         Console.WriteLine("\n=== Counting plant types using Mutex ===");
         ResetCounters();
         var stopwatch = Stopwatch.StartNew();
         
-        // Create multiple tasks to count plants by type
         var tasks = new List<Task>();
         for (int i = 0; i < 5; i++)
         {
@@ -168,7 +166,6 @@ public class PlantSorter
             {
                 for (int j = startIndex; j < endIndex; j++)
                 {
-                    // Critical section protected by Mutex
                     mutex.WaitOne();
                     try
                     {

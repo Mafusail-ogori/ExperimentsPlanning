@@ -10,22 +10,16 @@ public class PlantSorter
     private readonly List<Plant> plants;
     private readonly object lockObject = new object();
     private readonly Mutex mutex = new Mutex();
-    
-    // Counters for different plant types - shared resources that need synchronization
     private int floweringCount = 0;
     private int decorativeCount = 0;
     private int vegetableCount = 0;
     private int fruitCount = 0;
     private int bushCount = 0;
-    
-    // Results for plant analysis - initialize in constructor to fix warnings
     private List<Plant> sunnyPlants = new List<Plant>();
     private List<Plant> shadePlants = new List<Plant>();
     private List<Plant> partialShadePlants = new List<Plant>();
     private List<Plant> wetPlants = new List<Plant>();
     private List<Plant> dryPlants = new List<Plant>();
-
-    // Flags to track task completion - now used in properties and methods
     private bool analysisDone = false;
     private bool sortingDone = false;
 
